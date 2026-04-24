@@ -9,8 +9,8 @@
     "clean": "pnpm -r run clean",
     "test": "pnpm -r run test",
     "pack:check": "pnpm run build && pnpm publish -r --dry-run --no-git-checks --access public",
-    "docker:build": "docker buildx build --platform=linux/amd64 -t cr3labs/doppel-claw:latest .",
-    "docker:push": "docker buildx build --platform=linux/amd64 --push -t cr3labs/doppel-claw:latest ."
+    "docker:build": "sh -c 'ref=\"${GCP_CLAW_DOCKER_IMAGE:-cr3labs/doppel-claw:latest}\"; docker buildx build --platform=linux/amd64 -t \"$ref\" .'",
+    "docker:push": "sh -c 'set -e; ref=\"${GCP_CLAW_DOCKER_IMAGE:-}\"; if [ -z \"$ref\" ]; then echo \"docker:push: set GCP_CLAW_DOCKER_IMAGE to your Artifact Registry image (e.g. us-central1-docker.pkg.dev/PROJECT/REPO/doppel-claw:latest)\" >&2; exit 1; fi; docker buildx build --platform=linux/amd64 --push -t \"$ref\" .'"
   },
   "engines": {
     "node": ">=20"

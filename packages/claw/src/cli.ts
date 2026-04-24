@@ -2,9 +2,13 @@
 /**
  * CLI — run the wake-driven claw agent. Requires DOPPEL_AGENT_API_KEY and a block (BLOCK_ID or profile default).
  * Optional: dotenv to load .env; OPENROUTER_API_KEY for LLM.
+ *
+ * When `PORT` is set (Railway, Cloud Run, etc.), binds a minimal HTTP listener so platform TCP/HTTP
+ * health checks succeed. The agent itself only uses WebSockets to the engine — it does not serve app traffic.
  */
 import { config as loadDotenv } from "dotenv";
-import { resolve, dirname } from "node:path";
+import { createServer } from "node:http";
+import { resolve } from "node:path";
 import WebSocket from "ws";
 import { createClient } from "@doppelfun/sdk";
 import {
@@ -24,7 +28,27 @@ const cwd = process.cwd();
 loadDotenv({ path: resolve(cwd, ".env") });
 loadDotenv({ path: resolve(cwd, "..", "..", ".env") });
 
+/** Railway / Cloud Run expect the process to accept connections on `PORT` for health checks. */
+function startPlatformHealthListenerIfPort(): void {
+  const raw = process.env.PORT?.trim();
+  if (!raw) return;
+  const port = Number(raw);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) return;
+  const server = createServer((_req, res) => {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("ok\n");
+  });
+  server.listen(port, "0.0.0.0", () => {
+    console.log("[claw] Health endpoint listening on 0.0.0.0:%d (for container probes)", port);
+  });
+  server.on("error", (err) => {
+    console.error("[claw] Health listener failed:", err);
+  });
+}
+
 async function main(): Promise<void> {
+  startPlatformHealthListenerIfPort();
   const { config, profile } = await bootstrapAgent();
   const blockId = getDefaultBlockId(profile, config, "0_0");
 
