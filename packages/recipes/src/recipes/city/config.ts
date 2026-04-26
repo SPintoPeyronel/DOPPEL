@@ -7,6 +7,8 @@ export type CityGenConfig = {
   seed: number;
   pyramidRow?: number;
   pyramidCol?: number;
+  /** When true, no pyramid is emitted and the center block is kept empty (no buildings). */
+  noPyramid?: boolean;
 };
 
 export const DEFAULT_CITY_CONFIG: CityGenConfig = {
@@ -47,5 +49,5 @@ export function clampCityConfig(
     base.pyramidRow = Math.max(0, Math.min(base.gridRows - 2, DEFAULT_CITY_CONFIG.pyramidRow));
     base.pyramidCol = Math.max(0, Math.min(base.gridCols - 2, DEFAULT_CITY_CONFIG.pyramidCol));
   }
-  return base;
+  return { ...base, noPyramid: !!c.noPyramid };
 }

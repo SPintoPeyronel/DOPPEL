@@ -9,6 +9,7 @@ export type { SeedBuildingEntry } from "./catalog-bridge.js";
 export {
   catalogEntriesToSeedBuildings,
   CATEGORY_VEHICLES,
+  getBillboardCatalogIds,
   getCatalogIdsByCategory,
   getTrafficLightCatalogIds,
   normalizeBuildingsParam,

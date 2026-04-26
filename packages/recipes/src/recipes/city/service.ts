@@ -289,6 +289,12 @@ function emitAntenna(
   );
 }
 
+const BILLBOARD_FACADE_CHANCE = 0.34;
+const BILLBOARD_SCALE = 0.52;
+const BILLBOARD_FACE_PAD = 0.1;
+const BILLBOARD_Y_FRAC_MIN = 0.38;
+const BILLBOARD_Y_FRAC_MAX = 0.82;
+
 /** Scale windows to match scaled building (sx,sy,sz). */
 function emitWindows(
   parts: string[],
@@ -298,13 +304,16 @@ function emitWindows(
   bz: number,
   rng: () => number,
   buildingScale: number,
+  windowColors: readonly string[],
+  winIntensity: number,
 ): void {
   const θ = b.rotation;
   const cosR = Math.cos(θ);
   const sinR = Math.sin(θ);
   const geoCX = bx;
   const geoCZ = bz;
-  const wColor = pick(WINDOW_COLORS, rng);
+  const palette = windowColors.length > 0 ? windowColors : WINDOW_COLORS;
+  const wColor = pick(palette, rng);
   let winIdx = 0;
   const hw = (b.width / 2) * buildingScale;
   const hd = (b.depth / 2) * buildingScale;
@@ -335,12 +344,49 @@ function emitWindows(
       const wx = geoCX + localX * cosR - localZ * sinR;
       const wz = geoCZ + localX * sinR + localZ * cosR;
       parts.push(
-        `  <m-cube id="win-${idx}-${winIdx}" x="${r2(wx)}" y="${r2(wy)}" z="${r2(wz)}" ry="${deg(face.winRy)}" width="${WIN_W}" height="${WIN_H}" depth="0.05" color="${wColor}" emission="${wColor}" emission-intensity="${WIN_INTENSITY}" collide="false" />`,
+        `  <m-cube id="win-${idx}-${winIdx}" x="${r2(wx)}" y="${r2(wy)}" z="${r2(wz)}" ry="${deg(face.winRy)}" width="${WIN_W}" height="${WIN_H}" depth="0.05" color="${wColor}" emission="${wColor}" emission-intensity="${r2(winIntensity)}" collide="false" />`,
       );
       winIdx++;
       w++;
     }
   }
+}
+
+/** Random facade billboard (m-model) for catalog billboard assets. */
+function emitBillboardOnBuilding(
+  parts: string[],
+  id: string,
+  b: BuildingPlacement,
+  bx: number,
+  bz: number,
+  rng: () => number,
+  buildingScale: number,
+  catalogId: string,
+): void {
+  const θ = b.rotation;
+  const cosR = Math.cos(θ);
+  const sinR = Math.sin(θ);
+  const hw = (b.width / 2) * buildingScale;
+  const hd = (b.depth / 2) * buildingScale;
+  const spanW = b.width * buildingScale;
+  const spanD = b.depth * buildingScale;
+  const faceHeight = b.height * buildingScale;
+  const faces = [
+    { nx: 0, nz: 1, dist: hd, span: spanW, winRy: θ },
+    { nx: 0, nz: -1, dist: hd, span: spanW, winRy: θ + Math.PI },
+    { nx: -1, nz: 0, dist: hw, span: spanD, winRy: θ - Math.PI / 2 },
+    { nx: 1, nz: 0, dist: hw, span: spanD, winRy: θ + Math.PI / 2 },
+  ];
+  const face = pick(faces, rng);
+  const lateral = (rng() - 0.5) * 0.62 * face.span;
+  const wy = faceHeight * (BILLBOARD_Y_FRAC_MIN + rng() * (BILLBOARD_Y_FRAC_MAX - BILLBOARD_Y_FRAC_MIN));
+  const localX = face.nx * (face.dist + BILLBOARD_FACE_PAD) + (face.nz !== 0 ? lateral : 0);
+  const localZ = face.nz * (face.dist + BILLBOARD_FACE_PAD) + (face.nx !== 0 ? lateral : 0);
+  const wx = bx + localX * cosR - localZ * sinR;
+  const wz = bz + localX * sinR + localZ * cosR;
+  parts.push(
+    `  <m-model id="${id}" x="${r2(wx)}" y="${r2(wy)}" z="${r2(wz)}" ry="${deg(face.winRy)}" sx="${BILLBOARD_SCALE}" sy="${BILLBOARD_SCALE}" sz="${BILLBOARD_SCALE}" catalogId="${catalogId}" collide="false" />`,
+  );
 }
 
 // --- Street furniture (lights, vehicles, traffic lights) ----------------------
@@ -609,7 +655,7 @@ function emitTrafficLights(
   }
 }
 
-/** Emit full city MML: streets, buildings (with windows/antennas), pyramid, lights, vehicles. */
+/** Emit full city MML: streets, buildings (with windows/antennas/billboards), optional pyramid, lights, vehicles. */
 function cityToMml(
   buildings: BuildingPlacement[],
   streets: StreetSegment[],
@@ -618,11 +664,15 @@ function cityToMml(
   offsetX: number,
   offsetZ: number,
   seed: number,
-  pyramidCell: CellBounds | null,
+  reservedCell: CellBounds | null,
+  shouldEmitPyramid: boolean,
   vehicleCatalogIds: string[],
   trafficLightCatalogIds: string[],
   gridRows: number,
   gridCols: number,
+  windowColors: readonly string[],
+  windowEmissionIntensity: number,
+  billboardCatalogIds: readonly string[],
 ): string {
   const parts: string[] = [];
   const rng = mulberry32(seed ^ 0xbeef);
@@ -667,7 +717,7 @@ function cityToMml(
   const BUILDING_SCALE = 1.2;
   for (let i = 0; i < buildings.length; i++) {
     const b = buildings[i]!;
-    if (pyramidCell && buildingInCell(b, pyramidCell)) continue;
+    if (reservedCell && buildingInCell(b, reservedCell)) continue;
     const bx = b.x + offsetX;
     const bz = b.z + offsetZ;
     // sx/sy/sz scale the model and collision; physics uses catalogId + dimensions from engine.
@@ -677,11 +727,14 @@ function cityToMml(
     const hasAntenna = b.height >= ANTENNA_HEIGHT_THRESHOLD && rng() < ANTENNA_CHANCE;
     if (hasAntenna) emitAntenna(parts, i, b, bx, bz, rng, BUILDING_SCALE);
     if (!hasAntenna && BUILDING_CATALOG_IDS_WITH_WINDOWS.has(b.catalogId)) {
-      emitWindows(parts, i, b, bx, bz, rng, BUILDING_SCALE);
+      emitWindows(parts, i, b, bx, bz, rng, BUILDING_SCALE, windowColors, windowEmissionIntensity);
+    }
+    if (billboardCatalogIds.length > 0 && rng() < BILLBOARD_FACADE_CHANCE) {
+      emitBillboardOnBuilding(parts, `billboard-${i}`, b, bx, bz, rng, BUILDING_SCALE, pick(billboardCatalogIds, rng));
     }
   }
 
-  if (pyramidCell) emitPyramid(parts, pyramidCell, offsetX, offsetZ, seed);
+  if (shouldEmitPyramid && reservedCell) emitPyramid(parts, reservedCell, offsetX, offsetZ, seed);
   return `<m-group id="city-layout-root">\n${parts.join("\n")}\n</m-group>`;
 }
 
@@ -703,6 +756,12 @@ export type GenerateCityMmlOptions = {
    * If omitted or empty, no traffic lights are emitted.
    */
   trafficLightCatalogIds?: string[];
+  /** Hex colors for emissive window cubes (e.g. `["#ff0040","#00aaff"]`). Empty uses built-in palette. */
+  windowColors?: string[];
+  /** Emission intensity for window cubes; default matches recipe constant. */
+  windowEmissionIntensity?: number;
+  /** Billboard catalog IDs (e.g. from catalog category "Billboard"); placed randomly on building facades. */
+  billboardCatalogIds?: string[];
 };
 
 /** Pure MML generator; no I/O. Building pool from options.buildings; empty if omitted. */
@@ -724,10 +783,20 @@ export function generateCityMml(
   const pool = options?.buildings?.length ? options.buildings : [];
   const layout = generateCityLayout(pool, layoutCfg);
 
-  let pyramidCell: CellBounds | null = null;
-  if (c.pyramidRow != null && c.pyramidCol != null) {
-    const cellFn = getCellBounds({ ...layoutCfg, centerX: 0, centerZ: 0 });
-    pyramidCell = cellFn(c.pyramidRow, c.pyramidCol);
+  const cellFn = getCellBounds({ ...layoutCfg, centerX: 0, centerZ: 0 });
+  const cellRows = c.gridRows - 1;
+  const cellCols = c.gridCols - 1;
+  const centerRow = Math.max(0, Math.floor((cellRows - 1) / 2));
+  const centerCol = Math.max(0, Math.floor((cellCols - 1) / 2));
+
+  let reservedCell: CellBounds | null = null;
+  let shouldEmitPyramid = false;
+  if (c.noPyramid) {
+    reservedCell = cellFn(centerRow, centerCol);
+    shouldEmitPyramid = false;
+  } else if (c.pyramidRow != null && c.pyramidCol != null) {
+    reservedCell = cellFn(c.pyramidRow, c.pyramidCol);
+    shouldEmitPyramid = reservedCell != null;
   }
 
   const offsetX = BLOCK_SIZE_M / 2;
@@ -735,6 +804,14 @@ export function generateCityMml(
   const vehicleCatalogIds =
     options?.vehicleCatalogIds?.length ? options.vehicleCatalogIds : DEFAULT_VEHICLE_CATALOG_IDS;
   const trafficLightCatalogIds = options?.trafficLightCatalogIds ?? [];
+  const windowColors = options?.windowColors?.length ? options.windowColors : [];
+  const windowEmissionIntensity =
+    typeof options?.windowEmissionIntensity === "number" &&
+    Number.isFinite(options.windowEmissionIntensity) &&
+    options.windowEmissionIntensity > 0
+      ? options.windowEmissionIntensity
+      : WIN_INTENSITY;
+  const billboardCatalogIds = options?.billboardCatalogIds?.length ? options.billboardCatalogIds : [];
   return cityToMml(
     layout.buildings,
     layout.streets,
@@ -743,10 +820,14 @@ export function generateCityMml(
     offsetX,
     offsetZ,
     c.seed,
-    pyramidCell,
+    reservedCell,
+    shouldEmitPyramid,
     vehicleCatalogIds,
     trafficLightCatalogIds,
     c.gridRows,
     c.gridCols,
+    windowColors,
+    windowEmissionIntensity,
+    billboardCatalogIds,
   );
 }

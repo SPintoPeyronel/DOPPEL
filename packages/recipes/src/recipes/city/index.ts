@@ -11,6 +11,7 @@ import { clampCityConfig } from "./config.js";
 import {
   normalizeBuildingsParam,
   catalogEntriesToSeedBuildings,
+  getBillboardCatalogIds,
   getCatalogIdsByCategory,
   getTrafficLightCatalogIds,
   CATEGORY_VEHICLES,
@@ -80,6 +81,21 @@ function stringArrayParam(
   return arr.length > 0 ? arr : undefined;
 }
 
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+
+/** Optional `windowColors` / `window_colors` array of #hex strings. */
+function windowColorsParam(c: Record<string, unknown>): string[] | undefined {
+  const arr = (c.windowColors ?? c.window_colors) as unknown;
+  if (!Array.isArray(arr)) return undefined;
+  const out: string[] = [];
+  for (const item of arr) {
+    if (typeof item !== "string") continue;
+    const s = item.trim();
+    if (HEX_COLOR.test(s)) out.push(s);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 export const run: RecipeRunner = (raw: Record<string, unknown>): string => {
   const c = getParams(raw);
   const rawCatalog = c.catalog ?? (raw as { catalog?: unknown }).catalog;
@@ -90,11 +106,13 @@ export const run: RecipeRunner = (raw: Record<string, unknown>): string => {
   let buildingsFromParams: ReturnType<typeof normalizeBuildingsParam> = null;
   let vehicleIds: string[] | undefined;
   let trafficLightIds: string[] | undefined;
+  let billboardIds: string[] | undefined;
 
   if (catalogEntries?.length) {
     buildingsFromParams = catalogEntriesToSeedBuildings(catalogEntries);
     vehicleIds = getCatalogIdsByCategory(catalogEntries, CATEGORY_VEHICLES);
     trafficLightIds = getTrafficLightCatalogIds(catalogEntries);
+    billboardIds = getBillboardCatalogIds(catalogEntries);
   }
 
   // Fallback to explicit params (backward compat).
@@ -106,6 +124,9 @@ export const run: RecipeRunner = (raw: Record<string, unknown>): string => {
   }
   if (!trafficLightIds?.length) {
     trafficLightIds = stringArrayParam(c, "trafficLightCatalogIds", "traffic_light_catalog_ids");
+  }
+  if (!billboardIds?.length) {
+    billboardIds = stringArrayParam(c, "billboardCatalogIds", "billboard_catalog_ids");
   }
 
   // Pyramid cell: disable if explicitly false/none/off.
@@ -128,6 +149,11 @@ export const run: RecipeRunner = (raw: Record<string, unknown>): string => {
   if (buildingsFromParams?.length) options.buildings = buildingsFromParams;
   if (vehicleIds?.length) options.vehicleCatalogIds = vehicleIds;
   if (trafficLightIds?.length) options.trafficLightCatalogIds = trafficLightIds;
+  if (billboardIds?.length) options.billboardCatalogIds = billboardIds;
+  const wc = windowColorsParam(c);
+  if (wc?.length) options.windowColors = wc;
+  const wInt = numParam(c, "windowEmissionIntensity", "window_emission_intensity");
+  if (wInt != null && wInt > 0) options.windowEmissionIntensity = wInt;
 
   return generateCityMml(cfg, Object.keys(options).length > 0 ? options : undefined);
 };

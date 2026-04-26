@@ -49,7 +49,14 @@ function hasValidIdAndUrl(e: CatalogLike, requireUrl: boolean): boolean {
   return true;
 }
 
+function isBillboardLike(e: CatalogLike): boolean {
+  const cat = (e.category || "").toLowerCase();
+  const assetType = (e.assetType || "").toLowerCase();
+  return cat.includes("billboard") || assetType.includes("billboard");
+}
+
 function isBuildingLike(e: CatalogLike, hints: string[]): boolean {
+  if (isBillboardLike(e)) return false;
   const cat = (e.category || "").toLowerCase();
   const assetType = (e.assetType || "").toLowerCase();
   const categoryMatch = hints.some((h) => cat.includes(h) || assetType.includes(h));
@@ -87,7 +94,8 @@ export function catalogEntriesToSeedBuildings(
   if (out.length === 0) {
     seen.clear();
     for (const e of entries) {
-      if (hasValidIdAndUrl(e, requireUrl) && hasGlbUrl(e)) pushEntry(e);
+      if (!hasValidIdAndUrl(e, requireUrl) || isBillboardLike(e)) continue;
+      if (hasGlbUrl(e)) pushEntry(e);
     }
   }
   return out;
@@ -126,6 +134,16 @@ export function getTrafficLightCatalogIds(entries: CatalogLike[]): string[] {
     const name = (e.name ?? "").toLowerCase();
     const id = (e.id ?? "").toLowerCase();
     return cat.includes("prop") && (id.includes(traffic) || name.includes(traffic));
+  });
+}
+
+/** Catalog ids for billboard assets (category/assetType/id/name contains "billboard"), with .glb url. */
+export function getBillboardCatalogIds(entries: CatalogLike[]): string[] {
+  return collectCatalogIds(entries, (e) => {
+    if (isBillboardLike(e)) return true;
+    const id = (e.id ?? "").toLowerCase();
+    const name = (e.name ?? "").toLowerCase();
+    return id.includes("billboard") || name.includes("billboard");
   });
 }
 

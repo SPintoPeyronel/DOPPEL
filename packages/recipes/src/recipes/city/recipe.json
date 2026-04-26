@@ -1,7 +1,7 @@
 {
   "id": "city",
   "name": "City",
-  "description": "Recipe: city grid (streets, buildings, pyramid, lights, vehicles). Pass catalog to derive buildings/vehicles/lights.",
+  "description": "Recipe: city grid (streets, buildings, optional pyramid or empty center plaza, lights, vehicles). Pass catalog to derive buildings, vehicles, traffic lights, billboards.",
   "inject": ["catalog"],
   "inputs": [
     { "name": "catalog", "type": "array", "optional": true, "description": "Full block catalog; recipe parses to buildings, vehicles, traffic lights" },
@@ -16,7 +16,11 @@
     { "name": "seed", "type": "number", "optional": true, "description": "PRNG seed" },
     { "name": "pyramidRow", "type": "number", "optional": true, "description": "Pyramid cell row" },
     { "name": "pyramidCol", "type": "number", "optional": true, "description": "Pyramid cell col" },
-    { "name": "noPyramid", "type": "boolean", "optional": true, "description": "No pyramid in grid" },
+    { "name": "noPyramid", "type": "boolean", "optional": true, "description": "Omit pyramid; reserve the geometric center block as empty plaza (no buildings)" },
+    { "name": "pyramid", "type": "boolean", "optional": true, "description": "Alias: false / none / off (with noPyramid) omits pyramid; center stays empty" },
+    { "name": "windowColors", "type": "array", "optional": true, "description": "Hex palette for emissive window cubes on Building2 (e.g. [\"#00aaff\",\"#ff6600\"])" },
+    { "name": "windowEmissionIntensity", "type": "number", "optional": true, "description": "Emission intensity for window cubes" },
+    { "name": "billboardCatalogIds", "type": "array", "optional": true, "description": "Billboard catalog IDs; if omitted, derived from catalog entries tagged billboard" },
     { "name": "buildings", "type": "array", "optional": true, "description": "Building pool (id, name, url, width, depth, height)" },
     { "name": "vehicleCatalogIds", "type": "array", "optional": true, "description": "Vehicle catalog IDs" },
     { "name": "trafficLightCatalogIds", "type": "array", "optional": true, "description": "Traffic light catalog IDs" }
