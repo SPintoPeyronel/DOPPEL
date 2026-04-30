@@ -39,7 +39,13 @@ export {
   AUTONOMOUS_OPENING_GREETINGS,
   matchesStockOpeningGreeting,
 } from "./lib/chat/openingGreetings.js";
-export { buildSystemContent, buildUserMessage } from "./lib/prompts/index.js";
+export {
+  buildSystemContent,
+  buildUserMessage,
+  SYSTEM_PROMPT,
+  BUILDER_SYSTEM_PROMPT,
+  type ClawConfigPrompt,
+} from "./lib/prompts/index.js";
 export { runObedientAgentTick } from "./lib/agent/obedientAgent.js";
 export { runAutonomousAgentTick } from "./lib/agent/autonomousAgent.js";
 export {

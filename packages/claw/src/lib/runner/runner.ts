@@ -205,7 +205,11 @@ export function createRunner(options: RunnerOptions): AgentLoop {
     600_000
   );
   let lastPlatformInboundHeartbeatAt = 0;
-  const clawConfigPrompt = { soul: config.soul ?? undefined, skills: undefined };
+  const clawConfigPrompt = {
+    soul: config.soul ?? undefined,
+    skills: undefined,
+    agentType: config.agentType,
+  };
   const systemContent = buildSystemContent(clawConfigPrompt);
 
   const runObedientAgent =

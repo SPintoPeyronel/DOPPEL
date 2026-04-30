@@ -242,6 +242,27 @@ describe("createTreeAgent", () => {
       const agent = createTreeAgent({ store, config });
       expect(agent.OwnerAwayOrInConversation()).toBe(true);
     });
+
+    it("stays true past activityEndDate while hub still reports a pending run (until Return)", () => {
+      const { store, config } = createTestContext({
+        ownerUserId: "owner-1",
+        agentType: "companion",
+      });
+      store.setConversationPhase("idle");
+      store.setState({
+        hubCoarseActivity: "conversation",
+        hubActivityEndAtMs: Date.now() - 60_000,
+      });
+      store.setOccupants(
+        [
+          { clientId: "me", userId: "agent-a", type: "agent", position: { x: 0, z: 0 } },
+          { clientId: "owner-sess", userId: "owner-1", type: "user", position: { x: 1, z: 0 } },
+        ],
+        "me"
+      );
+      const agent = createTreeAgent({ store, config });
+      expect(agent.OwnerAwayOrInConversation()).toBe(true);
+    });
   });
 
   describe("getTreeState", () => {
