@@ -9,8 +9,8 @@
     "clean": "pnpm -r run clean",
     "test": "pnpm -r run test",
     "pack:check": "pnpm run build && pnpm publish -r --dry-run --no-git-checks --access public",
-    "docker:build": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; ref=\"${GCP_CLAW_DOCKER_IMAGE:-cr3labs/doppel-claw:latest}\"; docker buildx build --platform=linux/amd64 -t \"$ref\" .'",
-    "docker:push": "sh -c 'set -e; if [ -f .env ]; then set -a; . ./.env; set +a; fi; ref=\"${GCP_CLAW_DOCKER_IMAGE:-}\"; if [ -z \"$ref\" ]; then echo \"docker:push: set GCP_CLAW_DOCKER_IMAGE in doppel-sdk/.env or export it in the shell\" >&2; exit 1; fi; docker buildx build --platform=linux/amd64 --push -t \"$ref\" .'"
+    "docker:build": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; ref=\"${GCP_CLAW_DOCKER_IMAGE:-cr3labs/doppel-claw:latest}\"; repo=\"${ref%:*}\"; if [ \"$repo\" != \"$ref\" ]; then docker buildx build --platform=linux/amd64 -t \"$ref\" -t \"${repo}:stage\" .; else docker buildx build --platform=linux/amd64 -t \"$ref\" .; fi'",
+    "docker:push": "bash scripts/docker-push.sh"
   },
   "engines": {
     "node": ">=20"
