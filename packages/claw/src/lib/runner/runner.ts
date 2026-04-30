@@ -26,7 +26,9 @@ import type { ClawStore } from "../state/index.js";
 import type { ClawConfig } from "../config/index.js";
 import type { TreeAction } from "../state/index.js";
 import { clawLog } from "../../util/log.js";
+import { parseIntEnv } from "../../util/env.js";
 import { pickSocialSeekTargetOccupant, pickWanderMoveTargetOccupant } from "../../util/position.js";
+import { hubCompanionActivityActive } from "../hubActivity.js";
 import { tickActivityGlobalBlurb } from "../activityGlobalBlurb.js";
 import { tickTrainingSpellcastEmote } from "../trainingSpellcastEmote.js";
 
@@ -35,6 +37,19 @@ const OCCUPANTS_REFRESH_MS = 10_000;
 
 /** Interval (ms) to re-fetch GET /api/agents/me/state (credits + agent kind + companion activity). */
 const AGENT_STATE_REFRESH_MS = 30_000;
+
+/**
+ * When `PORT` is set (Railway / Cloud Run), periodic **inbound** HTTP to the local health listener keeps
+ * the platform from treating the service as idle (outbound-only engine WebSocket does not count).
+ * Env `CLAW_PLATFORM_INBOUND_HEARTBEAT_MS` — default 120_000, clamped 30_000–600_000.
+ */
+function parsePlatformInboundHeartbeatPort(): number | null {
+  const raw = process.env.PORT?.trim();
+  if (!raw) return null;
+  const port = Number(raw);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) return null;
+  return port;
+}
 
 /** Min/max cooldown (ms) before next autonomous move. Shared by move-to-nearest, seek-social, and movement driver on arrival. */
 const AUTONOMOUS_MOVE_COOLDOWN_MS = { min: 20_000, max: 45_000 };
@@ -182,6 +197,14 @@ export type RunnerOptions = {
  */
 export function createRunner(options: RunnerOptions): AgentLoop {
   const { store, config, client, executeMovementAndDrain, onUsageReportFailure, refreshHubSession } = options;
+  const platformInboundHeartbeatPort = parsePlatformInboundHeartbeatPort();
+  const platformInboundHeartbeatMs = parseIntEnv(
+    "CLAW_PLATFORM_INBOUND_HEARTBEAT_MS",
+    120_000,
+    30_000,
+    600_000
+  );
+  let lastPlatformInboundHeartbeatAt = 0;
   const clawConfigPrompt = { soul: config.soul ?? undefined, skills: undefined };
   const systemContent = buildSystemContent(clawConfigPrompt);
 
@@ -215,6 +238,22 @@ export function createRunner(options: RunnerOptions): AgentLoop {
 
   const defaultExecuteMovementAndDrain = (): void => {
     if (!client) return;
+    if (platformInboundHeartbeatPort != null) {
+      const now = Date.now();
+      const s = store.getState();
+      const keepWarm =
+        (config.agentType === "companion" && hubCompanionActivityActive(store)) || s.isThinking;
+      if (keepWarm && now - lastPlatformInboundHeartbeatAt >= platformInboundHeartbeatMs) {
+        lastPlatformInboundHeartbeatAt = now;
+        const url = `http://127.0.0.1:${platformInboundHeartbeatPort}/`;
+        void fetch(url, { signal: AbortSignal.timeout(8000) }).catch((e) => {
+          clawLog(
+            "runner: platform inbound heartbeat failed",
+            e instanceof Error ? e.message : String(e)
+          );
+        });
+      }
+    }
     movementDriverTick(client, store, {
       voiceId: config.voiceId,
       onVoiceSent:

@@ -4,7 +4,9 @@
  * Optional: dotenv to load .env; OPENROUTER_API_KEY for LLM.
  *
  * When `PORT` is set (Railway, Cloud Run, etc.), binds a minimal HTTP listener so platform TCP/HTTP
- * health checks succeed. The agent itself only uses WebSockets to the engine — it does not serve app traffic.
+ * health checks succeed. The agent uses WebSockets to the engine (outbound); during companion hub
+ * activity or an LLM tick, the runner also GETs that listener on loopback so Cloud Run sees inbound
+ * traffic (`CLAW_PLATFORM_INBOUND_HEARTBEAT_MS`, default 120s).
  */
 import { config as loadDotenv } from "dotenv";
 import { createServer } from "node:http";
