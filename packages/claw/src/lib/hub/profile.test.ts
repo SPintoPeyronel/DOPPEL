@@ -1,16 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { createClawStore } from "../state/index.js";
 import { testConfig } from "../../util/testHelpers.js";
-import { applyHubAgentState } from "./profile.js";
+import { applyHubAgentState, applyHubProfileToConfig } from "./profile.js";
+import type { HubAgentProfile } from "./hub.js";
 
-function baseState(overrides: Partial<{ credits: number; currentActivity: string; activityEndDate: string | null }> = {}) {
-  const { credits = 10, currentActivity = "explore", activityEndDate = null } = overrides;
+function baseState(
+  overrides: Partial<{
+    credits: number;
+    currentActivity: string;
+    activityEndDate: string | null;
+    defaultBlockId: string | null;
+  }> = {}
+) {
+  const { credits = 10, currentActivity = "explore", activityEndDate = null, defaultBlockId = null } = overrides;
   return {
     ok: true as const,
     credits,
     agentType: "companion" as const,
     currentActivity,
     activityEndDate,
+    defaultBlockId,
   };
 }
 
@@ -82,5 +91,38 @@ describe("applyHubAgentState", () => {
     expect(s.nextAutonomousMoveAt).toBeGreaterThan(Date.now());
     expect(s.movementTarget).toEqual({ x: 1, z: 2 });
     expect(s.wakePending).toBe(false);
+  });
+
+  it("sets config.blockId from state.defaultBlockId when hub sends a non-empty UUID", () => {
+    const store = createClawStore("0_0");
+    const config = testConfig({ blockId: "env-stale-block-id" });
+    applyHubAgentState(store, config, baseState({ defaultBlockId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }));
+    expect(config.blockId).toBe("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+  });
+
+  it("does not clear config.blockId when state.defaultBlockId is null", () => {
+    const store = createClawStore("0_0");
+    const config = testConfig({ blockId: "keep-me" });
+    applyHubAgentState(store, config, baseState({ defaultBlockId: null }));
+    expect(config.blockId).toBe("keep-me");
+  });
+});
+
+describe("applyHubProfileToConfig block precedence", () => {
+  it("overwrites BLOCK_ID-derived config.blockId when profile has defaultBlockId", () => {
+    const config = testConfig({ blockId: "env-block" });
+    const profile: HubAgentProfile = { defaultBlockId: "db-block-uuid" };
+    applyHubProfileToConfig(config, profile);
+    expect(config.blockId).toBe("db-block-uuid");
+  });
+
+  it("prefers default_space_id over defaultBlock.blockId when both are set", () => {
+    const config = testConfig({ blockId: "env-block" });
+    const profile: HubAgentProfile = {
+      default_space_id: "space-wins",
+      defaultBlock: { blockId: "nested-loses", serverUrl: null },
+    };
+    applyHubProfileToConfig(config, profile);
+    expect(config.blockId).toBe("space-wins");
   });
 });

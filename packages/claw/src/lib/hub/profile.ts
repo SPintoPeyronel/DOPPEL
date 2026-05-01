@@ -10,6 +10,30 @@ import type { HubAgentProfile, HubAgentStateResult } from "./hub.js";
 import type { ClawStore } from "../state/index.js";
 
 /**
+ * Canonical default block from hub agent profile (DB-backed fields).
+ * Order: `default_space_id` → top-level `defaultBlockId` → nested `defaultBlock.blockId`.
+ * All of these take precedence over process `BLOCK_ID` merged into {@link ClawConfig.blockId}.
+ */
+export function getProfileCanonicalBlockId(profile: HubAgentProfile | undefined): string | null {
+  if (!profile) return null;
+  const spaceId =
+    typeof profile.default_space_id === "string" ? profile.default_space_id.trim() : "";
+  if (spaceId) return spaceId;
+  const top =
+    typeof profile.defaultBlockId === "string" && profile.defaultBlockId.trim() !== ""
+      ? profile.defaultBlockId.trim()
+      : "";
+  if (top) return top;
+  const nested =
+    profile.defaultBlock &&
+    typeof profile.defaultBlock.blockId === "string" &&
+    profile.defaultBlock.blockId.trim() !== ""
+      ? profile.defaultBlock.blockId.trim()
+      : "";
+  return nested || null;
+}
+
+/**
  * Apply hub profile to config (mutates config).
  * Sets voiceEnabled, voiceId, dailyCreditBudget, soul; when hub has hosted, can set config.hosted.
  */
@@ -22,6 +46,8 @@ export function applyHubProfileToConfig(config: ClawConfig, profile: HubAgentPro
   if (profile.soul !== undefined) config.soul = profile.soul ?? null;
   if (typeof profile.hosted === "boolean") config.hosted = profile.hosted;
   if (typeof profile.id === "string") config.agentId = profile.id;
+  const canonicalBlock = getProfileCanonicalBlockId(profile);
+  if (canonicalBlock) config.blockId = canonicalBlock;
 }
 
 /**
@@ -71,6 +97,9 @@ export function applyHubAgentState(
   config: ClawConfig,
   state: Extract<HubAgentStateResult, { ok: true }>
 ): void {
+  if (state.defaultBlockId != null && state.defaultBlockId.trim() !== "") {
+    config.blockId = state.defaultBlockId.trim();
+  }
   config.agentType = state.agentType;
   const endMs =
     state.activityEndDate != null ? Date.parse(state.activityEndDate) : Number.NaN;

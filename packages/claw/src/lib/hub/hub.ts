@@ -32,8 +32,11 @@ export type HubAgentProfile = {
   soul?: string | null;
   /** Future: scheduled task definitions. schedule can be cron expression or interval in ms. */
   cronTasks?: Array<{ id: string; schedule: string; instruction: string; intervalMs?: number }>;
-  /** Default block to join (from hub). */
-  defaultBlock?: { blockId?: string; serverUrl?: string | null };
+  /** Canonical default world block id from hub DB (`default_space_id`); prefer over `BLOCK_ID` env. */
+  defaultBlockId?: string | null;
+  /** Default block to join (from hub); may be null if block row is missing. */
+  defaultBlock?: { blockId?: string; serverUrl?: string | null } | null;
+  /** Same as `defaultBlockId` when hub exposes snake_case (e.g. companion APIs). */
   default_space_id?: string;
   /** Future: quests this agent offers. */
   quests?: Array<{ id: string; title: string; description?: string; objectives?: string[] }>;
@@ -58,6 +61,8 @@ export type HubAgentStateResult =
       agentType: "builder" | "companion";
       currentActivity: HubCoarseActivity;
       activityEndDate: string | null;
+      /** Hub DB default block; when non-empty, overrides stale `BLOCK_ID` env on the claw. */
+      defaultBlockId: string | null;
     }
   | { ok: false; error: string; status?: number };
 
@@ -260,7 +265,10 @@ function parseHubAgentStateJson(text: string): HubAgentStateResult {
   const endRaw = data.activityEndDate;
   const activityEndDate =
     typeof endRaw === "string" && endRaw.trim() !== "" ? endRaw.trim() : null;
-  return { ok: true, credits, agentType, currentActivity, activityEndDate };
+  const rawDefault = data.defaultBlockId ?? data.default_space_id;
+  const defaultBlockId =
+    typeof rawDefault === "string" && rawDefault.trim() !== "" ? rawDefault.trim() : null;
+  return { ok: true, credits, agentType, currentActivity, activityEndDate, defaultBlockId };
 }
 
 /**

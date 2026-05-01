@@ -18,6 +18,21 @@ describe("getDefaultBlockId", () => {
     expect(getDefaultBlockId(profile, config, "0_0")).toBe("space-42");
   });
 
+  it("returns profile.defaultBlockId over BLOCK_ID env when nested defaultBlock is absent", () => {
+    const profile: HubAgentProfile = { defaultBlockId: "top-level-db-uuid" };
+    const config = testConfig({ blockId: "env-fallback" });
+    expect(getDefaultBlockId(profile, config, "0_0")).toBe("top-level-db-uuid");
+  });
+
+  it("prefers default_space_id over defaultBlock.blockId when both present", () => {
+    const profile: HubAgentProfile = {
+      default_space_id: "from-db-column",
+      defaultBlock: { blockId: "from-join-row", serverUrl: null },
+    };
+    const config = testConfig({ blockId: "env" });
+    expect(getDefaultBlockId(profile, config, "0_0")).toBe("from-db-column");
+  });
+
   it("returns config.blockId when profile has no block", () => {
     const config = testConfig({ blockId: "config-block" });
     expect(getDefaultBlockId(undefined, config, "0_0")).toBe("config-block");

@@ -5,7 +5,7 @@
 
 import { loadConfig, type ClawConfig } from "./config/index.js";
 import { getAgentProfile, joinBlock, type HubAgentProfile } from "./hub/index.js";
-import { applyHubProfileToConfig } from "./hub/profile.js";
+import { applyHubProfileToConfig, getProfileCanonicalBlockId } from "./hub/profile.js";
 import { createClawStore, type ClawStore } from "./state/index.js";
 import { refreshBalance } from "./credits/index.js";
 import { normalizeUrl } from "../util/url.js";
@@ -45,12 +45,11 @@ export async function bootstrapAgent(): Promise<BootstrapResult> {
 }
 
 /**
- * Resolve block id for join: profile defaultBlock / default_space_id, then config.blockId, then fallback.
+ * Resolve block id for join: hub DB fields from profile (see {@link getProfileCanonicalBlockId}),
+ * then `config.blockId` (typically `BLOCK_ID` env when hub had no default), then fallback.
  */
 export function getDefaultBlockId(profile: HubAgentProfile | undefined, config: ClawConfig, fallback: string): string {
-  const fromProfile =
-    (profile?.defaultBlock as { blockId?: string } | undefined)?.blockId ??
-    (typeof profile?.default_space_id === "string" ? profile.default_space_id.trim() : null);
+  const fromProfile = getProfileCanonicalBlockId(profile);
   if (fromProfile) return fromProfile;
   if (config.blockId) return config.blockId;
   return fallback;

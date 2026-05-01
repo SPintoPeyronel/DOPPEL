@@ -12,4 +12,9 @@ export {
   type CheckBalanceResult,
   type JoinBlockResult,
 } from "./hub.js";
-export { applyHubProfileToConfig, applyHubAgentState, setCachedBalance } from "./profile.js";
+export {
+  applyHubProfileToConfig,
+  applyHubAgentState,
+  getProfileCanonicalBlockId,
+  setCachedBalance,
+} from "./profile.js";

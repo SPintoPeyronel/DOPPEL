@@ -57,6 +57,7 @@ export {
   joinBlock,
   applyHubProfileToConfig,
   applyHubAgentState,
+  getProfileCanonicalBlockId,
   setCachedBalance,
   type HubAgentProfile,
   type HubAgentStateResult,
