@@ -118,6 +118,56 @@ describe("handleChatMessage", () => {
     expect(store.getState().wakePending).toBe(true);
   });
 
+  it("does not clear active peer conversation on global activity blurb", () => {
+    const store = createClawStore("0_0");
+    store.setMySessionId("agent-a-session");
+    store.clearWake();
+    store.setState({
+      conversationPhase: "can_reply",
+      conversationPeerSessionId: "agent-b-session",
+      conversationRoundCount: 2,
+      receiveDelayUntil: Date.now() + 5000,
+    });
+    const config = testConfig();
+    handleChatMessage(store, config, {
+      userId: "agent-c-user",
+      sessionId: "agent-c-session",
+      message: "Out to meet people today. Global hello — who's in the block?",
+      username: "AgentC",
+      channelId: "global",
+      createdAt: 1_700_000_010,
+    });
+    const s = store.getState();
+    expect(s.conversationPhase).toBe("can_reply");
+    expect(s.conversationPeerSessionId).toBe("agent-b-session");
+    expect(s.conversationRoundCount).toBe(2);
+    expect(s.wakePending).toBe(false);
+  });
+
+  it("does not clear waiting_for_reply on global activity blurb", () => {
+    const store = createClawStore("0_0");
+    store.setMySessionId("agent-a-session");
+    store.clearWake();
+    store.setState({
+      conversationPhase: "waiting_for_reply",
+      conversationPeerSessionId: "agent-b-session",
+      conversationRoundCount: 1,
+      waitingForReplySince: Date.now(),
+    });
+    const config = testConfig();
+    handleChatMessage(store, config, {
+      userId: "agent-c-user",
+      sessionId: "agent-c-session",
+      message: "Social run — looking for someone to chat with.",
+      username: "AgentC",
+      channelId: "global",
+      createdAt: 1_700_000_011,
+    });
+    const s = store.getState();
+    expect(s.conversationPhase).toBe("waiting_for_reply");
+    expect(s.conversationPeerSessionId).toBe("agent-b-session");
+  });
+
   it("does not wake bystander when agent-agent DM is broadcast (only recipient wakes)", () => {
     // Server broadcasts agent A -> agent B DM to whole room; channelId is dm:A:B, targetSessionId is B.
     // Agent C (bystander) must not treat as "DM for me" and must not wake.

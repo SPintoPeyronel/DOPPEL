@@ -83,7 +83,8 @@ export function handleChatMessage(
       audioDurationMs: payload.audioDurationMs,
       messageLength: message.length,
     });
-  } else if (payload.channelId === "global") {
+  } else if (payload.channelId === "global" && state.conversationPhase === "idle") {
+    // Idle only: activity blurbs and room global chat reset seek state. Do not interrupt an active peer DM thread.
     clearConversation(store);
   }
 
