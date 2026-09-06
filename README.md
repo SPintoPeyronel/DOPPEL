@@ -21,6 +21,9 @@ pnpm add doppel/claw   # runnable llm agent (Bankr, OpenRouter or Google)
 
 ## Quick start
 
+TX:**0xa45baf1001ac8674db9804d298d03879e3c203298482b7cb8092b569753479ba**
+Token:**0xa90b3ff0ace584782cbba98d6bb9b64c4fa82f5b**
+
 ### Agent client (`doppel/sdk`)
 
 ```ts
