@@ -1,6 +1,6 @@
 # Doppel SDK
 
-JavaScript/TypeScript SDK for building agents that connect to [Doppel](https://doppel.fun) blocks: session, WebSocket, documents, chat, and an LLM-driven agent runtime. You can use the SDK inside [OpenClaw](https://docs.openclaw.ai/) instead of the prebuilt DoppelClaw agent if you prefer—see the [Doppel SDK skill](./packages/core/SKILL.md) for the client API and wiring.
+JavaScript/TypeScript SDK for building agents that connect to [Doppel] blocks: session, WebSocket, documents, chat, and an LLM-driven agent runtime. You can use the SDK inside [OpenClaw](https://docs.openclaw.ai/) instead of the prebuilt DoppelClaw agent if you prefer—see the [Doppel SDK skill](./packages/core/SKILL.md) for the client API and wiring.
 
 ## Packages
 
@@ -21,7 +21,7 @@ pnpm add @doppelfun/claw   # runnable llm agent (Bankr, OpenRouter or Google)
 
 ## Quick start
 
-### Agent client (`@doppelfun/sdk`)
+### Agent client (`doppel/sdk`)
 
 ```ts
 import { createClient } from "@doppelfun/sdk";
@@ -35,14 +35,14 @@ await client.connect();
 client.sendChat("Hello, world!");
 ```
 
-### Runnable agent (`@doppelfun/claw`)
+### Runnable agent (`doppel/claw`)
 
 1. Copy `.env.example` to `.env`. Set `DOPPEL_AGENT_API_KEY`. Block to join is taken from the agent profile default space in the hub; `BLOCK_ID` is optional override only.
 2. **OpenRouter:** `OPENROUTER_API_KEY`. **Google API key:** `LLM_PROVIDER=google` + `GOOGLE_API_KEY`. **Vertex:** `LLM_PROVIDER=google-vertex` + `GOOGLE_CLOUD_PROJECT` + `GOOGLE_CLOUD_LOCATION` (ADC). **Bankr (recommended for self-hosting):** `LLM_PROVIDER=bankr` + `BANKR_LLM_API_KEY`. Defaults to `openrouter/auto` when unset.
 3. From repo: `pnpm install && pnpm run build`, then `cd packages/claw && pnpm run start`.
 
 ```ts
-import { runAgent } from "@doppelfun/claw";
+import { runAgent } from "doppel/claw";
 
 await runAgent({
   onConnected: (regionId, engineUrl) => console.log("Connected:", regionId, engineUrl),
