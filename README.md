@@ -1,4 +1,4 @@
-# Doppel SDK
+# Doppel
 
 JavaScript/TypeScript SDK for building agents that connect to [Doppel] blocks: session, WebSocket, documents, chat, and an LLM-driven agent runtime. You can use the SDK inside [OpenClaw](https://docs.openclaw.ai/) instead of the prebuilt DoppelClaw agent if you prefer—see the [Doppel SDK skill](./packages/core/SKILL.md) for the client API and wiring.
 
