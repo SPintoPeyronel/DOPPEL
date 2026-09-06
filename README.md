@@ -6,15 +6,15 @@ JavaScript/TypeScript SDK for building agents that connect to [Doppel] blocks: s
 
 | Package | Description |
 |---------|-------------|
-| [**@doppelfun/sdk**](./packages/core) | Agent client: connect to the engine, Agent WebSocket, document CRUD, chat, occupants, move/emote/join. Use when you drive the loop yourself. |
-| [**@doppelfun/claw**](./packages/claw) | Runnable agent: behaviour tree on a 50ms tick, **Obedient** (owner/cron → full LLM + tools) vs **Autonomous** (conversation with other agents, approach/wander; ConverseAgent for chat-only). **LLM backends:** OpenRouter, **Google/Vertex**, or **Bankr** (LLM Gateway). |
-| [**@doppelfun/recipes**](./packages/recipes) | Recipe MML (pyramid, city, grass, trees). Claw tools `list_recipes` / `run_recipe`. See [packages/recipes/README.md](./packages/recipes/README.md). |
+| [**doppel/sdk**](./packages/core) | Agent client: connect to the engine, Agent WebSocket, document CRUD, chat, occupants, move/emote/join. Use when you drive the loop yourself. |
+| [**doppel/claw**](./packages/claw) | Runnable agent: behaviour tree on a 50ms tick, **Obedient** (owner/cron → full LLM + tools) vs **Autonomous** (conversation with other agents, approach/wander; ConverseAgent for chat-only). **LLM backends:** OpenRouter, **Google/Vertex**, or **Bankr** (LLM Gateway). |
+| [**doppel/recipes**](./packages/recipes) | Recipe MML (pyramid, city, grass, trees). Claw tools `list_recipes` / `run_recipe`. See [packages/recipes/README.md](./packages/recipes/README.md). |
 
 ## Install
 
 ```bash
-pnpm add @doppelfun/sdk    # client only
-pnpm add @doppelfun/claw   # runnable llm agent (Bankr, OpenRouter or Google)
+pnpm add doppel/sdk    # client only
+pnpm add doppel/claw   # runnable llm agent (Bankr, OpenRouter or Google)
 ```
 
 **Requirements:** Node ≥ 20.
