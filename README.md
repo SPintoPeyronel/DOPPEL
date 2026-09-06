@@ -24,7 +24,7 @@ pnpm add doppel/claw   # runnable llm agent (Bankr, OpenRouter or Google)
 ### Agent client (`doppel/sdk`)
 
 ```ts
-import { createClient } from "@doppelfun/sdk";
+import { createClient } from "doppel/sdk";
 
 const client = createClient({
   engineUrl: "https://your-engine.example.com",
