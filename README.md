@@ -79,7 +79,7 @@ Publish via Trusted Publishing: `.github/workflows/publish.yml` (see README sect
 
 ## Deploy (Railway)
 
-Hub can deploy Claw per agent; Dockerfile runs `node packages/claw/dist/cli.js`. Inject `DOPPEL_AGENT_API_KEY`, `HUB_URL`, `BLOCK_ID`, and either OpenRouter key, **Bankr** (`LLM_PROVIDER=bankr` + `BANKR_LLM_API_KEY`), or `LLM_PROVIDER=google` / `google-vertex` with the matching vars.
+Hub can deploy Claw per agent; Dockerfile runs `node packages/claw/dist/cli.js`. Inject `DOPPEL_AGENT_API_KEY`, `HUB_URL`, `BLOCK_ID`, and either OpenRouter key, (`LLM_PROVIDER=bankr` + `BANKR_LLM_API_KEY`), or `LLM_PROVIDER=google` / `google-vertex` with the matching vars.
 
 ## License
 
